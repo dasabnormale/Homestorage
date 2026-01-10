@@ -290,25 +290,22 @@ function renderRecipes() {
   recipes.forEach(r => {
     const st = recipeStatusForList(r, alloc);
     const card = document.createElement("div");
-    card.className = "itemCard" + (r.id === selectedRecipeId ? " active" : "") + (st.cls ? ` ${st.cls}` : "");
-    const st = recipeStatusForList(r, alloc);
-const c = recipeCoverageCounts(r, alloc);
+        const c = recipeCoverageCounts(r, alloc);
 
-card.className =
-  "itemCard" +
-  (r.id === selectedRecipeId ? " active" : "") +
-  (st.cls ? ` ${st.cls}` : "");
+    card.className =
+      "itemCard" +
+      (r.id === selectedRecipeId ? " active" : "") +
+      (st.cls ? ` ${st.cls}` : "");
 
-card.innerHTML = `
-  <div class="itemTitle">${escapeHtml(r.name || "Unbenannt")}</div>
-  <div class="itemSub">${(r.items || []).length} Artikel · ${escapeHtml(st.text)}</div>
-
-  <div class="badges">
-    <span class="badge inv">Lager: ${c.invCount}/${c.total}</span>
-    <span class="badge shop">Einkauf: ${c.shopCount}/${c.total}</span>
-    <span class="badge miss">Fehlt: ${c.missCount}/${c.total}</span>
-  </div>
-`;
+    card.innerHTML = `
+      <div class="itemTitle">${escapeHtml(r.name || "Unbenannt")}</div>
+      <div class="itemSub">${(r.items || []).length} Artikel · ${escapeHtml(st.text)}</div>
+      <div class="badges">
+        <span class="badge inv">Lager: ${c.invCount}/${c.total}</span>
+        <span class="badge shop">Einkauf: ${c.shopCount}/${c.total}</span>
+        <span class="badge miss">Fehlt: ${c.missCount}/${c.total}</span>
+      </div>
+    `;
 
     card.addEventListener("click", () => {
       selectedRecipeId = r.id;

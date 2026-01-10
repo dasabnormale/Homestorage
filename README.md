@@ -46,5 +46,5 @@ git
 - Kasse & Impulszone (Schoggi, Kaugummi, Batterien, Rasierklingen, kleine Aktionen)
 
 ## Development
-VS Code with Live Server Extension
+VS Code with Live Server and Codex Extension
 
