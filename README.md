@@ -6,7 +6,7 @@ Selfhosted
 Maybe VPN to Connect
 Shopping List sorted after place where to find it.
     Aktionen / Saisonflächen (Paletten, Promo-Inseln, Themenwochen)
-
+git
 - Blumen / Pflanzen (häufig direkt am Eingang)
 
 - Früchte & Gemüse (meist der erste “richtige” Bereich)

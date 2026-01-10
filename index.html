@@ -21,6 +21,7 @@
   <a class="navLink" href="#articles" data-route="articles">Artikel</a>
   <a class="navLink" href="#shopping" data-route="shopping">Einkaufsliste</a>
   <a class="navLink" href="#inventory" data-route="inventory">Lager</a>
+  <a class="navLink" href="#history" data-route="history">Historie</a>
 </nav>
   </header>
 
@@ -183,11 +184,53 @@
         <div class="panelHeader">
           <div class="panelTitle">Einkaufsliste</div>
           <div class="panelActions">
-            <button class="btn" id="btnClearDone">Erledigte löschen</button>
-            <button class="btn danger" id="btnClearAll">Alles löschen</button>
-          </div>
+            <button class="btn" id="btnSelectAllShopping">Alle auswählen</button>
+            <button class="btn" id="btnSelectNoneShopping">Auswahl aufheben</button>
+            <button class="btn primary" id="btnConfirmPurchase">Einkauf bestätigen</button>
+            <button class="btn danger" id="btnClearShopping">Liste leeren</button>
+            </div>
         </div>
+<div class="block">
+  <div class="blockTitle">Artikel manuell hinzufügen</div>
 
+  <div class="grid3">
+    <div class="field">
+      <label>Artikel</label>
+      <select id="shopAddArticleSelect"></select>
+    </div>
+    <div class="field">
+      <label>Menge</label>
+      <input id="shopAddQty" type="number" min="1" step="1" value="1" />
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" id="btnAddManualToShopping">Zur Einkaufsliste</button>
+    </div>
+  </div>
+
+  <div class="inlineAdd">
+    <div class="inlineAddTitle">Artikel fehlt? Direkt erfassen</div>
+    <div class="grid3">
+      <div class="field">
+        <label>Name</label>
+        <input id="shopNewArticleName" type="text" placeholder="z.B. Zahnpasta" />
+      </div>
+      <div class="field">
+        <label>Einheit (für Rezepte & Einkaufsliste)</label>
+        <input id="shopNewArticleUnit" type="text" value="Stk" />
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="btn" id="btnShopCreateArticle">Artikel speichern</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Typische Verbrauchszeit (Tage)</label>
+      <input id="shopNewArticleUseDays" type="number" min="0" step="1" value="0" />
+    </div>
+    <div class="hint">Beispiel: Banane 7, Zahnpasta 180. 0 = egal/nicht berechnen.</div>
+  </div>
+</div>
         <div id="shoppingList" class="shopping"></div>
         <div id="shoppingEmpty" class="empty hidden">Einkaufsliste ist leer.</div>
       </div>
@@ -206,6 +249,20 @@
     <div id="inventoryEmpty" class="empty hidden">Lager ist leer.</div>
   </div>
 </section>
+<section id="view-history" class="view hidden">
+  <div class="panel">
+    <div class="panelHeader">
+      <div class="panelTitle">Historie</div>
+      <div class="panelActions">
+        <button class="btn danger" id="btnClearHistory">Historie löschen</button>
+      </div>
+    </div>
+
+    <div id="historyList"></div>
+    <div id="historyEmpty" class="empty hidden">Keine Einkäufe in der Historie.</div>
+  </div>
+</section>
+
   </main>
 
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true">

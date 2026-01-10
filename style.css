@@ -340,3 +340,60 @@ input::placeholder, textarea::placeholder{color: rgba(168,179,207,.65)}
   .inventory .irow{grid-template-columns: 1fr}
   .inventory .iqty,.inventory .iactions{justify-content:flex-start}
 }
+
+.row.hlInv{
+  border-color: rgba(118,209,255,.35);
+  background: rgba(118,209,255,.08);
+}
+.row.hlShop{
+  border-color: rgba(90,167,255,.35);
+  background: rgba(90,167,255,.08);
+}
+.row.hlMissing{
+  border-color: rgba(255,90,122,.35);
+  background: rgba(255,90,122,.06);
+}
+
+
+.itemCard .badges{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.badge{
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  color: var(--text);
+  background: rgba(255,255,255,.03);
+}
+
+.badge.inv{
+  border-color: rgba(118,209,255,.35);
+  background: rgba(118,209,255,.10);
+}
+
+.badge.shop{
+  border-color: rgba(90,167,255,.35);
+  background: rgba(90,167,255,.10);
+}
+
+.badge.miss{
+  border-color: rgba(255,90,122,.35);
+  background: rgba(255,90,122,.08);
+}
+
+.itemCard.ok{
+  border-color: rgba(118,209,255,.35);
+  background: rgba(118,209,255,.08);
+}
+.itemCard.needShop{
+  border-color: rgba(90,167,255,.35);
+  background: rgba(90,167,255,.08);
+}
+.itemCard.missing{
+  border-color: rgba(255,90,122,.35);
+}
