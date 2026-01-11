@@ -48,6 +48,8 @@ const ARTICLE_CATEGORIES = [
 ];
 const CATEGORY_FALLBACK = "Divers";
 const CATEGORY_ORDER = [...ARTICLE_CATEGORIES, CATEGORY_FALLBACK];
+const DEFAULT_UNIT = "Stk";
+const UNIT_OPTIONS = ["Stk", "Zehe", "g", "ml", "Pack", "Dose", "Bund"];
 let currentRoute = "recipes";
 let selectedRecipeId = null;
 let editingRecipeId = null;
@@ -84,6 +86,29 @@ function categoryOptionsHtml(selected) {
     opts.push(`<option value="${escapeHtml(cat)}"${sel}>${escapeHtml(cat)}</option>`);
   });
   return opts.join("");
+}
+
+function normalizeUnit(unit) {
+  const clean = (unit || "").trim();
+  return clean || DEFAULT_UNIT;
+}
+
+function unitOptionsHtml(selected) {
+  const clean = normalizeUnit(selected);
+  const opts = [];
+  if (!UNIT_OPTIONS.includes(clean)) {
+    opts.push(`<option value="${escapeHtml(clean)}" selected>${escapeHtml(clean)}</option>`);
+  }
+  UNIT_OPTIONS.forEach(unit => {
+    const sel = unit === clean ? " selected" : "";
+    opts.push(`<option value="${escapeHtml(unit)}"${sel}>${escapeHtml(unit)}</option>`);
+  });
+  return opts.join("");
+}
+
+function recipeItemUnit(item, article) {
+  const unit = item?.unit || article?.unit || DEFAULT_UNIT;
+  return normalizeUnit(unit);
 }
 
 function msDay(n) {
@@ -440,7 +465,7 @@ function renderRecipeRightPane(alloc) {
 
   items.forEach((it, idx) => {
     const a = getArticleById(it.articleId);
-    const unit = a?.unit || "Stk";
+    const unit = recipeItemUnit(it, a);
     const checked = it.checked !== false;
 
     const info = alloc?.[recipe.id]?.[it.articleId] || {
@@ -456,7 +481,7 @@ function renderRecipeRightPane(alloc) {
     row.innerHTML = `
       <input class="checkbox" type="checkbox" ${checked ? "checked" : ""} data-idx="${idx}" />
       <div>
-        <div class="name ${checked ? "" : "strike"}">${escapeHtml(a ? a.name : "Unbekannter Artikel")}</div>
+        <div class="name">${escapeHtml(a ? a.name : "Unbekannter Artikel")}</div>
         <div class="muted">
           Bedarf: ${escapeHtml(String(info.need))} ${escapeHtml(unit)}
           · Lager: ${escapeHtml(String(info.invCover))}
@@ -465,7 +490,7 @@ function renderRecipeRightPane(alloc) {
         </div>
       </div>
       <div class="qty">
-        <span class="${checked ? "" : "strike"}">${escapeHtml(String(it.qty || 1))} ${escapeHtml(unit)}</span>
+        <span>${escapeHtml(String(it.qty || 1))} ${escapeHtml(unit)}</span>
       </div>
       <div class="actions">
         <button class="btn" data-action="remove" data-idx="${idx}">Entfernen</button>
@@ -525,6 +550,7 @@ function renderRecipeEditor(recipe) {
   $("#editRecipeTags").value = (recipe.tags || "").toString();
   $("#editRecipeDescription").value = recipe.description || "";
   $("#editItemQty").value = 1;
+  $("#editItemUnit").value = DEFAULT_UNIT;
   $("#inlineArticleName").value = "";
   $("#inlineArticleCategory").value = "";
 
@@ -543,7 +569,7 @@ function renderRecipeEditor(recipe) {
     sorted.forEach(a => {
       const opt = document.createElement("option");
       opt.value = String(a.id);
-      opt.textContent = `${a.name} (${a.unit || "Stk"})`;
+      opt.textContent = `${a.name}`;
       sel.appendChild(opt);
     });
   }
@@ -552,16 +578,20 @@ function renderRecipeEditor(recipe) {
   wrap.innerHTML = "";
   (recipe.items || []).forEach((it, idx) => {
     const a = getArticleById(it.articleId);
+    const unit = recipeItemUnit(it, a);
     const row = document.createElement("div");
     row.className = "row";
     row.innerHTML = `
       <div></div>
       <div>
         <div class="name">${escapeHtml(a ? a.name : "Unbekannter Artikel")}</div>
-        <div class="muted">${escapeHtml(a ? (a.unit || "Stk") : "")}</div>
+        <div class="muted">${escapeHtml(unit)}</div>
       </div>
       <div class="qty">
         <input type="number" min="1" step="1" value="${escapeHtml(String(it.qty || 1))}" data-idx="${idx}" />
+        <select data-unit-idx="${idx}">
+          ${unitOptionsHtml(unit)}
+        </select>
       </div>
       <div class="actions">
         <button class="btn danger" data-action="remove" data-idx="${idx}">Entfernen</button>
@@ -572,6 +602,14 @@ function renderRecipeEditor(recipe) {
       const i = Number(e.target.dataset.idx);
       const r = getRecipeById(recipe.id);
       r.items[i].qty = Math.max(1, Number(e.target.value || 1));
+      upsertRecipe(r);
+      renderRecipeEditor(r);
+    });
+
+    row.querySelector('select[data-unit-idx]')?.addEventListener("change", (e) => {
+      const i = Number(e.target.dataset.unitIdx);
+      const r = getRecipeById(recipe.id);
+      r.items[i].unit = normalizeUnit(e.target.value);
       upsertRecipe(r);
       renderRecipeEditor(r);
     });
@@ -592,23 +630,23 @@ function renderRecipeEditor(recipe) {
     const articleId = Number(sel.value);
     if (!articleId) return;
     const qty = Math.max(1, Number($("#editItemQty").value || 1));
+    const unit = normalizeUnit($("#editItemUnit").value || DEFAULT_UNIT);
     const r = getRecipeById(recipe.id);
     r.items = r.items || [];
-    r.items.push({ articleId, qty, checked: true });
+    r.items.push({ articleId, qty, unit, checked: true });
     upsertRecipe(r);
     renderRecipeEditor(r);
   };
 
   $("#btnInlineAddArticle").onclick = () => {
     const name = ($("#inlineArticleName").value || "").trim();
-    const unit = $("#inlineArticleUnit").value || "Stk";
     const category = normalizeCategory($("#inlineArticleCategory").value || "");
     if (!name) return;
 
     const existing = state.articles.find(a => (a.name || "").trim().toLowerCase() === name.toLowerCase());
     if (existing) return;
 
-    const a = { id: Storage.nextId(state), name, unit, category, useDays: 0, createdAt: Date.now() };
+    const a = { id: Storage.nextId(state), name, category, useDays: 0, createdAt: Date.now() };
     upsertArticle(a);
     $("#inlineArticleName").value = "";
     $("#inlineArticleCategory").value = "";
@@ -645,7 +683,7 @@ $("#recipeSearch")?.addEventListener("input", renderRecipes);
 $("#historySearch")?.addEventListener("input", renderHistory);
 
 function openArticleEditor(articleId) {
-  const a = articleId ? getArticleById(articleId) : { id: null, name: "", unit: "Stk", category: "", useDays: 0 };
+  const a = articleId ? getArticleById(articleId) : { id: null, name: "", category: "", useDays: 0 };
 
   modalOpen({
     title: articleId ? "Artikel bearbeiten" : "Neuer Artikel",
@@ -653,10 +691,6 @@ function openArticleEditor(articleId) {
       <div class="field">
         <label>Name</label>
         <input id="mArticleName" type="text" value="${escapeHtml(a.name || "")}" />
-      </div>
-      <div class="field">
-        <label>Einheit (für Rezepte & Einkaufsliste)</label>
-        <input id="mArticleUnit" type="text" value="${escapeHtml(a.unit || "Stk")}" />
       </div>
       <div class="field">
         <label>Kategorie (optional)</label>
@@ -674,7 +708,6 @@ function openArticleEditor(articleId) {
       { label: "Abbrechen", className: "btn", onClick: modalClose },
       { label: "Speichern", className: "btn primary", onClick: () => {
         const name = ($("#mArticleName").value || "").trim();
-        const unit = ($("#mArticleUnit").value || "Stk").trim() || "Stk";
         const category = normalizeCategory($("#mArticleCategory").value || "");
         const useDays = Math.max(0, Number($("#mArticleUseDays").value || 0));
         if (!name) return;
@@ -682,8 +715,8 @@ function openArticleEditor(articleId) {
         const clash = state.articles.find(x => x.id !== a.id && (x.name||"").trim().toLowerCase() === name.toLowerCase());
         if (clash) return;
 
-        if (articleId) upsertArticle({ ...getArticleById(articleId), name, unit, category, useDays });
-        else upsertArticle({ id: Storage.nextId(state), name, unit, category, useDays, createdAt: Date.now() });
+        if (articleId) upsertArticle({ ...getArticleById(articleId), name, category, useDays });
+        else upsertArticle({ id: Storage.nextId(state), name, category, useDays, createdAt: Date.now() });
 
         modalClose();
         renderArticles();
@@ -737,7 +770,6 @@ function renderArticles() {
   table.innerHTML = `
     <div class="thead">
       <div>Name</div>
-      <div>Einheit</div>
       <div>Kategorie</div>
       <div style="text-align:right">Aktionen</div>
     </div>
@@ -756,7 +788,6 @@ function renderArticles() {
         ${escapeHtml(a.name || "")}
         <div class="muted">Verbrauchszeit: ${escapeHtml(String(Math.max(0, Number(a.useDays||0))))} Tage</div>
       </div>
-      <div class="tunit">${escapeHtml(a.unit || "Stk")}</div>
       <div class="tcategory">${escapeHtml(displayCategory(a.category))}</div>
       <div class="tactions">
         <button class="btn" data-action="edit" data-id="${a.id}">Bearbeiten</button>
