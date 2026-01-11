@@ -112,7 +112,7 @@
 
               <div class="inlineAdd">
                 <div class="inlineAddTitle">Artikel fehlt?</div>
-                <div class="grid3">
+                <div class="grid4">
                   <div class="field">
                     <label>Neuer Artikelname</label>
                     <input id="inlineArticleName" type="text" placeholder="z.B. Zwiebeln" />
@@ -126,6 +126,22 @@
                       <option value="Pack">Pack</option>
                       <option value="Dose">Dose</option>
                       <option value="Bund">Bund</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Kategorie (optional)</label>
+                    <select id="inlineArticleCategory">
+                      <option value="">Divers (keine Auswahl)</option>
+                      <option value="Blumen / Pflanzen">Blumen / Pflanzen</option>
+                      <option value="Früchte &amp; Gemüse">Früchte &amp; Gemüse</option>
+                      <option value="Backwaren / Brot">Backwaren / Brot</option>
+                      <option value="Frische Convenience">Frische Convenience</option>
+                      <option value="Milchprodukte Joghurt Käse">Milchprodukte Joghurt Käse</option>
+                      <option value="Fleisch/Fisch">Fleisch/Fisch</option>
+                      <option value="Charcuterie / Aufschnitt / Feinkost">Charcuterie / Aufschnitt / Feinkost</option>
+                      <option value="Grundnahrungsmittel">Grundnahrungsmittel</option>
+                      <option value="Tiefkühl">Tiefkühl</option>
+                      <option value="Non-Food">Non-Food</option>
                     </select>
                   </div>
                   <div class="field">
@@ -210,7 +226,7 @@
 
   <div class="inlineAdd">
     <div class="inlineAddTitle">Artikel fehlt? Direkt erfassen</div>
-    <div class="grid3">
+    <div class="grid4">
       <div class="field">
         <label>Name</label>
         <input id="shopNewArticleName" type="text" placeholder="z.B. Zahnpasta" />
@@ -218,6 +234,22 @@
       <div class="field">
         <label>Einheit (für Rezepte & Einkaufsliste)</label>
         <input id="shopNewArticleUnit" type="text" value="Stk" />
+      </div>
+      <div class="field">
+        <label>Kategorie (optional)</label>
+        <select id="shopNewArticleCategory">
+          <option value="">Divers (keine Auswahl)</option>
+          <option value="Blumen / Pflanzen">Blumen / Pflanzen</option>
+          <option value="Früchte &amp; Gemüse">Früchte &amp; Gemüse</option>
+          <option value="Backwaren / Brot">Backwaren / Brot</option>
+          <option value="Frische Convenience">Frische Convenience</option>
+          <option value="Milchprodukte Joghurt Käse">Milchprodukte Joghurt Käse</option>
+          <option value="Fleisch/Fisch">Fleisch/Fisch</option>
+          <option value="Charcuterie / Aufschnitt / Feinkost">Charcuterie / Aufschnitt / Feinkost</option>
+          <option value="Grundnahrungsmittel">Grundnahrungsmittel</option>
+          <option value="Tiefkühl">Tiefkühl</option>
+          <option value="Non-Food">Non-Food</option>
+        </select>
       </div>
       <div class="field">
         <label>&nbsp;</label>
@@ -250,16 +282,31 @@
   </div>
 </section>
 <section id="view-history" class="view hidden">
-  <div class="panel">
-    <div class="panelHeader">
-      <div class="panelTitle">Historie</div>
-      <div class="panelActions">
-        <button class="btn danger" id="btnClearHistory">Historie löschen</button>
+  <div class="split">
+    <aside class="panel">
+      <div class="panelHeader">
+        <div class="panelTitle">Historie</div>
+        <button class="btn" id="btnHistoryShowAll">Alle anzeigen</button>
       </div>
-    </div>
+      <div class="field">
+        <label>Suche</label>
+        <input id="historySearch" type="text" placeholder="z.B. Zwiebeln, Milch, ..." />
+      </div>
+      <div class="list" id="historyDateList"></div>
+      <div id="historyDateEmpty" class="empty hidden">Keine passenden Daten.</div>
+    </aside>
 
-    <div id="historyList"></div>
-    <div id="historyEmpty" class="empty hidden">Keine Einkäufe in der Historie.</div>
+    <section class="panel">
+      <div class="panelHeader">
+        <div class="panelTitle" id="historyDetailTitle">Historie</div>
+        <div class="panelActions">
+          <button class="btn danger" id="btnClearHistory">Historie löschen</button>
+        </div>
+      </div>
+
+      <div id="historyItems"></div>
+      <div id="historyItemsEmpty" class="empty hidden">Keine Einkäufe in der Historie.</div>
+    </section>
   </div>
 </section>
 

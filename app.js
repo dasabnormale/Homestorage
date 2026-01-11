@@ -34,14 +34,56 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 const routes = ["recipes", "articles", "shopping", "inventory", "history"];
+const ARTICLE_CATEGORIES = [
+  "Blumen / Pflanzen",
+  "Früchte & Gemüse",
+  "Backwaren / Brot",
+  "Frische Convenience",
+  "Milchprodukte Joghurt Käse",
+  "Fleisch/Fisch",
+  "Charcuterie / Aufschnitt / Feinkost",
+  "Grundnahrungsmittel",
+  "Tiefkühl",
+  "Non-Food"
+];
+const CATEGORY_FALLBACK = "Divers";
+const CATEGORY_ORDER = [...ARTICLE_CATEGORIES, CATEGORY_FALLBACK];
 let currentRoute = "recipes";
 let selectedRecipeId = null;
 let editingRecipeId = null;
+let historyShowAll = true;
+let selectedHistoryDateKey = null;
 
 function escapeHtml(s) {
   return (s ?? "").toString().replace(/[&<>"']/g, (c) => ({
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
   }[c]));
+}
+
+function normalizeCategory(cat) {
+  const clean = (cat || "").trim();
+  return ARTICLE_CATEGORIES.includes(clean) ? clean : "";
+}
+
+function displayCategory(cat) {
+  const clean = normalizeCategory(cat);
+  return clean || CATEGORY_FALLBACK;
+}
+
+function categorySortIndex(cat) {
+  const label = displayCategory(cat);
+  const idx = CATEGORY_ORDER.indexOf(label);
+  return idx < 0 ? CATEGORY_ORDER.length - 1 : idx;
+}
+
+function categoryOptionsHtml(selected) {
+  const clean = normalizeCategory(selected);
+  const opts = [`<option value="">${escapeHtml(`${CATEGORY_FALLBACK} (keine Auswahl)`)}</option>`];
+  ARTICLE_CATEGORIES.forEach(cat => {
+    const sel = cat === clean ? " selected" : "";
+    opts.push(`<option value="${escapeHtml(cat)}"${sel}>${escapeHtml(cat)}</option>`);
+  });
+  return opts.join("");
 }
 
 function msDay(n) {
@@ -423,7 +465,7 @@ function renderRecipeRightPane(alloc) {
         </div>
       </div>
       <div class="qty">
-        <span class="${checked ? "" : "strike"}">${escapeHtml(String(it.qty || 1))}</span>
+        <span class="${checked ? "" : "strike"}">${escapeHtml(String(it.qty || 1))} ${escapeHtml(unit)}</span>
       </div>
       <div class="actions">
         <button class="btn" data-action="remove" data-idx="${idx}">Entfernen</button>
@@ -484,6 +526,7 @@ function renderRecipeEditor(recipe) {
   $("#editRecipeDescription").value = recipe.description || "";
   $("#editItemQty").value = 1;
   $("#inlineArticleName").value = "";
+  $("#inlineArticleCategory").value = "";
 
   const sel = $("#editItemArticleSelect");
   sel.innerHTML = "";
@@ -559,14 +602,16 @@ function renderRecipeEditor(recipe) {
   $("#btnInlineAddArticle").onclick = () => {
     const name = ($("#inlineArticleName").value || "").trim();
     const unit = $("#inlineArticleUnit").value || "Stk";
+    const category = normalizeCategory($("#inlineArticleCategory").value || "");
     if (!name) return;
 
     const existing = state.articles.find(a => (a.name || "").trim().toLowerCase() === name.toLowerCase());
     if (existing) return;
 
-    const a = { id: Storage.nextId(state), name, unit, useDays: 0, createdAt: Date.now() };
+    const a = { id: Storage.nextId(state), name, unit, category, useDays: 0, createdAt: Date.now() };
     upsertArticle(a);
     $("#inlineArticleName").value = "";
+    $("#inlineArticleCategory").value = "";
     renderRecipeEditor(getRecipeById(recipe.id));
   };
 
@@ -597,9 +642,10 @@ $("#btnNewRecipe")?.addEventListener("click", () => {
 });
 
 $("#recipeSearch")?.addEventListener("input", renderRecipes);
+$("#historySearch")?.addEventListener("input", renderHistory);
 
 function openArticleEditor(articleId) {
-  const a = articleId ? getArticleById(articleId) : { id: null, name: "", unit: "Stk", useDays: 0 };
+  const a = articleId ? getArticleById(articleId) : { id: null, name: "", unit: "Stk", category: "", useDays: 0 };
 
   modalOpen({
     title: articleId ? "Artikel bearbeiten" : "Neuer Artikel",
@@ -613,6 +659,12 @@ function openArticleEditor(articleId) {
         <input id="mArticleUnit" type="text" value="${escapeHtml(a.unit || "Stk")}" />
       </div>
       <div class="field">
+        <label>Kategorie (optional)</label>
+        <select id="mArticleCategory">
+          ${categoryOptionsHtml(a.category)}
+        </select>
+      </div>
+      <div class="field">
         <label>Typische Verbrauchszeit (Tage)</label>
         <input id="mArticleUseDays" type="number" min="0" step="1" value="${escapeHtml(String(Math.max(0, Number(a.useDays || 0))))}" />
         <div class="hint">0 = nicht berechnen.</div>
@@ -623,14 +675,15 @@ function openArticleEditor(articleId) {
       { label: "Speichern", className: "btn primary", onClick: () => {
         const name = ($("#mArticleName").value || "").trim();
         const unit = ($("#mArticleUnit").value || "Stk").trim() || "Stk";
+        const category = normalizeCategory($("#mArticleCategory").value || "");
         const useDays = Math.max(0, Number($("#mArticleUseDays").value || 0));
         if (!name) return;
 
         const clash = state.articles.find(x => x.id !== a.id && (x.name||"").trim().toLowerCase() === name.toLowerCase());
         if (clash) return;
 
-        if (articleId) upsertArticle({ ...getArticleById(articleId), name, unit, useDays });
-        else upsertArticle({ id: Storage.nextId(state), name, unit, useDays, createdAt: Date.now() });
+        if (articleId) upsertArticle({ ...getArticleById(articleId), name, unit, category, useDays });
+        else upsertArticle({ id: Storage.nextId(state), name, unit, category, useDays, createdAt: Date.now() });
 
         modalClose();
         renderArticles();
@@ -685,6 +738,7 @@ function renderArticles() {
     <div class="thead">
       <div>Name</div>
       <div>Einheit</div>
+      <div>Kategorie</div>
       <div style="text-align:right">Aktionen</div>
     </div>
   `;
@@ -703,6 +757,7 @@ function renderArticles() {
         <div class="muted">Verbrauchszeit: ${escapeHtml(String(Math.max(0, Number(a.useDays||0))))} Tage</div>
       </div>
       <div class="tunit">${escapeHtml(a.unit || "Stk")}</div>
+      <div class="tcategory">${escapeHtml(displayCategory(a.category))}</div>
       <div class="tactions">
         <button class="btn" data-action="edit" data-id="${a.id}">Bearbeiten</button>
         <button class="btn danger" data-action="delete" data-id="${a.id}">Löschen</button>
@@ -779,14 +834,16 @@ function renderShopping() {
   $("#btnShopCreateArticle").onclick = () => {
     const name = ($("#shopNewArticleName")?.value || "").trim();
     const unit = ($("#shopNewArticleUnit")?.value || "Stk").trim() || "Stk";
+    const category = normalizeCategory($("#shopNewArticleCategory")?.value || "");
     const useDays = Math.max(0, Number($("#shopNewArticleUseDays")?.value || 0));
     if (!name) return;
 
     const existing = state.articles.find(a => (a.name||"").trim().toLowerCase() === name.toLowerCase());
     if (existing) return;
 
-    upsertArticle({ id: Storage.nextId(state), name, unit, useDays, createdAt: Date.now() });
+    upsertArticle({ id: Storage.nextId(state), name, unit, category, useDays, createdAt: Date.now() });
     $("#shopNewArticleName").value = "";
+    $("#shopNewArticleCategory").value = "";
     renderShopping();
   };
 
@@ -803,7 +860,17 @@ function renderShopping() {
     empty.classList.add("hidden");
   }
 
-  lines.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  lines.sort((a, b) => {
+    const aArticle = getArticleById(a.articleId);
+    const bArticle = getArticleById(b.articleId);
+    const aCat = displayCategory(aArticle?.category);
+    const bCat = displayCategory(bArticle?.category);
+    const catDiff = categorySortIndex(aCat) - categorySortIndex(bCat);
+    if (catDiff !== 0) return catDiff;
+    const aName = (aArticle?.name || "Unbekannter Artikel").toLowerCase();
+    const bName = (bArticle?.name || "Unbekannter Artikel").toLowerCase();
+    return aName.localeCompare(bName, "de");
+  });
 
   lines.forEach(line => {
     const a = getArticleById(line.articleId);
@@ -1065,68 +1132,167 @@ function renderInventory() {
 }
 
 function renderHistory() {
-  const list = $("#historyList");
-  const empty = $("#historyEmpty");
-  if (!list || !empty) return;
-  list.innerHTML = "";
+  const dateList = $("#historyDateList");
+  const dateEmpty = $("#historyDateEmpty");
+  const itemsWrap = $("#historyItems");
+  const itemsEmpty = $("#historyItemsEmpty");
+  const title = $("#historyDetailTitle");
+  const btnShowAll = $("#btnHistoryShowAll");
+  if (!dateList || !dateEmpty || !itemsWrap || !itemsEmpty || !title || !btnShowAll) return;
 
-  if (!state.history.length) {
-    empty.classList.remove("hidden");
-    return;
-  }
-  empty.classList.add("hidden");
+  const q = ($("#historySearch")?.value || "").trim().toLowerCase();
 
-  const groups = new Map();
+  dateList.innerHTML = "";
+  itemsWrap.innerHTML = "";
+
+  const groupMap = new Map();
   state.history.forEach(h => {
-    const k = fmtIsoDate(h.purchasedAt);
-    const arr = groups.get(k) || [];
-    arr.push(h);
-    groups.set(k, arr);
-  });
+    const dateKey = fmtIsoDate(h.purchasedAt);
+    let group = groupMap.get(dateKey);
+    if (!group) {
+      group = { dateKey, dateLabel: fmtDate(h.purchasedAt), sortTs: h.purchasedAt, items: [] };
+      groupMap.set(dateKey, group);
+    } else {
+      group.sortTs = Math.max(group.sortTs, h.purchasedAt);
+    }
 
-  [...groups.entries()].sort((a,b) => b[0].localeCompare(a[0])).forEach(([dateKey, entries]) => {
-    const header = document.createElement("div");
-    header.className = "block";
-    header.innerHTML = `<div class="blockTitle">${escapeHtml(fmtDate(entries[0].purchasedAt))}</div>`;
-    list.appendChild(header);
+    (h.items || []).forEach(it => {
+      const a = getArticleById(it.articleId);
+      const unit = it.unit || a?.unit || "Stk";
+      const name = a ? a.name : "Unbekannter Artikel";
 
-    entries.forEach(h => {
-      (h.items || []).forEach(it => {
-        const a = getArticleById(it.articleId);
-        const unit = it.unit || a?.unit || "Stk";
+      const sourceParts = [];
+      const sourceSearchParts = [];
+      (it.sources || [])
+        .filter(s => s.type === "recipe" && s.recipeId)
+        .forEach(s => {
+          const r = getRecipeById(s.recipeId);
+          if (r?.name) {
+            sourceParts.push(`${r.name}: ${s.qty} ${unit}`);
+            sourceSearchParts.push(r.name);
+          }
+        });
 
-        const sources = (it.sources || [])
-          .filter(s => s.type === "recipe" && s.recipeId)
-          .map(s => {
-            const r = getRecipeById(s.recipeId);
-            return r ? `${r.name}: ${s.qty} ${unit}` : null;
-          })
-          .filter(Boolean);
+      const manual = (it.sources || []).find(s => s.type === "manual");
+      if (manual) {
+        sourceParts.push(`Manuell: ${manual.qty} ${unit}`);
+        sourceSearchParts.push("manuell");
+      }
 
-        const manual = (it.sources || []).find(s => s.type === "manual");
-        if (manual) sources.push(`Manuell: ${manual.qty} ${unit}`);
+      const srcTxt = sourceParts.length
+        ? sourceParts.slice(0, 3).join(" · ") + (sourceParts.length > 3 ? " · …" : "")
+        : "—";
 
-        const srcTxt = sources.length ? sources.slice(0, 3).join(" · ") + (sources.length > 3 ? " · …" : "") : "—";
+      const searchText = `${name} ${unit} ${sourceSearchParts.join(" ")}`.toLowerCase();
 
-        const row = document.createElement("div");
-        row.className = "row";
-        row.innerHTML = `
-          <div></div>
-          <div>
-            <div class="name">${escapeHtml(a ? a.name : "Unbekannter Artikel")}</div>
-            <div class="muted">
-              Benötigt: ${escapeHtml(String(it.neededQty))} ${escapeHtml(unit)}
-              · Gekauft: ${escapeHtml(String(it.boughtQty))} ${escapeHtml(unit)}
-              · ${escapeHtml(srcTxt)}
-            </div>
-          </div>
-          <div class="qty"></div>
-          <div class="actions"></div>
-        `;
-        list.appendChild(row);
+      group.items.push({
+        name,
+        unit,
+        neededQty: Math.max(0, Number(it.neededQty || 0)),
+        boughtQty: Math.max(0, Number(it.boughtQty || 0)),
+        sourceTxt: srcTxt,
+        searchText
       });
     });
   });
+
+  const groups = [...groupMap.values()].sort((a, b) => (b.sortTs || 0) - (a.sortTs || 0));
+  const filteredGroups = groups
+    .map(g => {
+      const items = q ? g.items.filter(it => it.searchText.includes(q)) : g.items;
+      return { ...g, items };
+    })
+    .filter(g => g.items.length > 0);
+
+  const hasHistory = groups.length > 0;
+  if (!hasHistory) {
+    dateEmpty.textContent = "Keine Einkäufe in der Historie.";
+    itemsEmpty.textContent = "Keine Einkäufe in der Historie.";
+    dateEmpty.classList.remove("hidden");
+    itemsEmpty.classList.remove("hidden");
+    title.textContent = "Historie";
+    btnShowAll.classList.add("primary");
+    return;
+  }
+
+  btnShowAll.classList.toggle("primary", historyShowAll);
+
+  if (!filteredGroups.length) {
+    dateEmpty.textContent = "Keine passenden Daten.";
+    itemsEmpty.textContent = "Keine passenden Einkäufe.";
+    dateEmpty.classList.remove("hidden");
+    itemsEmpty.classList.remove("hidden");
+  } else {
+    dateEmpty.classList.add("hidden");
+    itemsEmpty.classList.add("hidden");
+  }
+
+  if (!historyShowAll) {
+    const keys = new Set(filteredGroups.map(g => g.dateKey));
+    if (!selectedHistoryDateKey || !keys.has(selectedHistoryDateKey)) {
+      selectedHistoryDateKey = filteredGroups.length ? filteredGroups[0].dateKey : null;
+    }
+  }
+
+  filteredGroups.forEach(g => {
+    const card = document.createElement("div");
+    const countTxt = `${g.items.length} Artikel`;
+    card.className = "itemCard" + (!historyShowAll && g.dateKey === selectedHistoryDateKey ? " active" : "");
+    card.innerHTML = `
+      <div class="itemTitle">${escapeHtml(g.dateLabel)}</div>
+      <div class="itemSub">${escapeHtml(countTxt)}</div>
+    `;
+    card.addEventListener("click", () => {
+      historyShowAll = false;
+      selectedHistoryDateKey = g.dateKey;
+      renderHistory();
+    });
+    dateList.appendChild(card);
+  });
+
+  const renderRow = (it) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div></div>
+      <div>
+        <div class="name">${escapeHtml(it.name)}</div>
+        <div class="muted">
+          Benötigt: ${escapeHtml(String(it.neededQty))} ${escapeHtml(it.unit)}
+          · Gekauft: ${escapeHtml(String(it.boughtQty))} ${escapeHtml(it.unit)}
+          · ${escapeHtml(it.sourceTxt)}
+        </div>
+      </div>
+      <div class="qty"></div>
+      <div class="actions"></div>
+    `;
+    return row;
+  };
+
+  if (historyShowAll) {
+    title.textContent = "Alle Einkäufe";
+    filteredGroups.forEach(g => {
+      const header = document.createElement("div");
+      header.className = "block";
+      header.innerHTML = `<div class="blockTitle">${escapeHtml(g.dateLabel)}</div>`;
+      itemsWrap.appendChild(header);
+      g.items.forEach(it => itemsWrap.appendChild(renderRow(it)));
+    });
+  } else if (selectedHistoryDateKey) {
+    const group = filteredGroups.find(g => g.dateKey === selectedHistoryDateKey) || null;
+    if (group) {
+      title.textContent = group.dateLabel;
+      group.items.forEach(it => itemsWrap.appendChild(renderRow(it)));
+    } else {
+      title.textContent = "Historie";
+    }
+  }
+
+  btnShowAll.onclick = () => {
+    historyShowAll = true;
+    selectedHistoryDateKey = null;
+    renderHistory();
+  };
 
   $("#btnClearHistory").onclick = () => {
     modalOpen({

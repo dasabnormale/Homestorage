@@ -106,6 +106,11 @@ input, textarea, select{
   color: var(--text);
   outline:none;
 }
+select{color-scheme: dark}
+select option, select optgroup{
+  background: var(--card);
+  color: var(--text);
+}
 textarea{resize:vertical}
 input::placeholder, textarea::placeholder{color: rgba(168,179,207,.65)}
 
@@ -202,8 +207,9 @@ input::placeholder, textarea::placeholder{color: rgba(168,179,207,.65)}
 
 .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
 .grid3{display:grid; grid-template-columns:1.5fr .7fr .9fr; gap:12px}
+.grid4{display:grid; grid-template-columns:1.4fr .7fr 1fr .8fr; gap:12px}
 @media (max-width: 980px){
-  .grid2,.grid3{grid-template-columns:1fr}
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
 }
 
 .inlineAdd{
@@ -243,7 +249,7 @@ input::placeholder, textarea::placeholder{color: rgba(168,179,207,.65)}
 }
 .thead,.trow{
   display:grid;
-  grid-template-columns: 1.2fr .6fr .8fr;
+  grid-template-columns: 1.2fr .6fr 1fr .8fr;
   gap:10px;
   align-items:center;
   padding:10px 12px;
