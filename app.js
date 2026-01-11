@@ -466,7 +466,7 @@ function renderRecipeRightPane(alloc) {
     modalOpen({
       title: "Auf Einkaufsliste",
       bodyHtml: `<div class="empty">${chosen.length} Artikel wurden auf die Einkaufsliste gesetzt (stückgenau wie im Rezept).</div>`,
-      footerButtons: [{ label: "OK", className: "btn primary", onClick: () => { modalClose(); location.hash = "#shopping"; routeTo("shopping"); } }]
+      footerButtons: [{ label: "OK", className: "btn primary", onClick: modalClose }]
     });
   };
 
@@ -834,11 +834,11 @@ function renderShopping() {
     row.innerHTML = `
       <input class="checkbox" type="checkbox" ${line.selected ? "checked" : ""} />
       <div>
-        <div class="sname">${escapeHtml(a ? a.name : "Unbekannter Artikel")}</div>
+        <div class="sname">${escapeHtml(a ? a.name : "Unbekannter Artikel")} (${escapeHtml(unit)})</div>
         <div class="smeta">Benötigt: ${escapeHtml(String(line.qty))} ${escapeHtml(unit)} · ${escapeHtml(sourceTxt)}</div>
       </div>
       <div class="sqty">
-        <span>${escapeHtml(String(line.qty))}</span>
+        <span>${escapeHtml(String(line.qty))} ${escapeHtml(unit)}</span>
       </div>
       <div class="sactions">
         <button class="btn danger">Entfernen</button>
