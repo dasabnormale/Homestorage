@@ -350,7 +350,10 @@ function renderRecipes() {
 
   const recipes = [...state.recipes].filter(r => {
     if (!q) return true;
-    const hay = `${r.name || ""} ${(r.tags || "")} ${(r.description || "")}`.toLowerCase();
+    const itemNames = (r.items || [])
+      .map(it => getArticleById(it.articleId)?.name || "")
+      .join(" ");
+    const hay = `${r.name || ""} ${(r.tags || "")} ${(r.description || "")} ${itemNames}`.toLowerCase();
     return hay.includes(q);
   });
 
