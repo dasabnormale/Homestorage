@@ -475,13 +475,17 @@ function renderRecipeRightPane(alloc) {
       need: Math.max(1, Number(it.qty||1)), invCover: 0, shopCover: 0, missing: Math.max(1, Number(it.qty||1))
     };
 
-    let hlClass = "hlMissing";
-    if (info.missing <= 0 && info.invCover >= info.need) hlClass = "hlInv";
-    else if (info.missing <= 0 && info.shopCover > 0) hlClass = "hlShop";
+    let hlClass = info.missing > 0 ? "hlMissing" : "";
+    const need = Math.max(1, Number(info.need || 1));
+    const invCover = Math.max(0, Number(info.invCover || 0));
+    const shopCover = Math.max(0, Number(info.shopCover || 0));
+    const invPct = Math.min(100, (invCover / need) * 100);
+    const shopEnd = Math.min(100, invPct + (shopCover / need) * 100);
 
     const row = document.createElement("div");
-    row.className = `row ${hlClass}`;
+    row.className = `row ${hlClass} hasCoverage`;
     row.innerHTML = `
+      <div class="coverageBg" style="--inv:${invPct}%; --shop:${shopEnd}%"></div>
       <input class="checkbox" type="checkbox" ${checked ? "checked" : ""} data-idx="${idx}" />
       <div>
         <div class="name">${escapeHtml(a ? a.name : "Unbekannter Artikel")}</div>
@@ -552,10 +556,18 @@ function renderRecipeEditor(recipe) {
   $("#editRecipeName").value = recipe.name || "";
   $("#editRecipeTags").value = (recipe.tags || "").toString();
   $("#editRecipeDescription").value = recipe.description || "";
+  const unitSelect = $("#editItemUnit");
+  const applyUnitOptions = (unit) => {
+    if (!unitSelect) return;
+    const clean = normalizeUnit(unit);
+    unitSelect.innerHTML = unitOptionsHtml(clean);
+    unitSelect.value = clean;
+  };
   $("#editItemQty").value = 1;
-  $("#editItemUnit").value = DEFAULT_UNIT;
+  applyUnitOptions(DEFAULT_UNIT);
   $("#inlineArticleName").value = "";
   $("#inlineArticleCategory").value = "";
+  $("#inlineArticleUseDays").value = 0;
 
   const sel = $("#editItemArticleSelect");
   sel.innerHTML = "";
@@ -576,6 +588,23 @@ function renderRecipeEditor(recipe) {
       sel.appendChild(opt);
     });
   }
+
+  if (unitSelect) {
+    if (!sorted.length) {
+      unitSelect.disabled = true;
+      applyUnitOptions(DEFAULT_UNIT);
+    } else {
+      unitSelect.disabled = false;
+      const currentArticle = getArticleById(Number(sel.value));
+      applyUnitOptions(currentArticle?.unit || DEFAULT_UNIT);
+    }
+  }
+
+  sel.onchange = () => {
+    if (!unitSelect) return;
+    const currentArticle = getArticleById(Number(sel.value));
+    applyUnitOptions(currentArticle?.unit || DEFAULT_UNIT);
+  };
 
   const wrap = $("#editRecipeItems");
   wrap.innerHTML = "";
@@ -633,7 +662,7 @@ function renderRecipeEditor(recipe) {
     const articleId = Number(sel.value);
     if (!articleId) return;
     const qty = Math.max(1, Number($("#editItemQty").value || 1));
-    const unit = normalizeUnit($("#editItemUnit").value || DEFAULT_UNIT);
+    const unit = normalizeUnit($("#editItemUnit")?.value || DEFAULT_UNIT);
     const r = getRecipeById(recipe.id);
     r.items = r.items || [];
     r.items.push({ articleId, qty, unit, checked: true });
@@ -644,15 +673,17 @@ function renderRecipeEditor(recipe) {
   $("#btnInlineAddArticle").onclick = () => {
     const name = ($("#inlineArticleName").value || "").trim();
     const category = normalizeCategory($("#inlineArticleCategory").value || "");
+    const useDays = Math.max(0, Number($("#inlineArticleUseDays").value || 0));
     if (!name) return;
 
     const existing = state.articles.find(a => (a.name || "").trim().toLowerCase() === name.toLowerCase());
     if (existing) return;
 
-    const a = { id: Storage.nextId(state), name, category, useDays: 0, createdAt: Date.now() };
+    const a = { id: Storage.nextId(state), name, category, useDays, createdAt: Date.now() };
     upsertArticle(a);
     $("#inlineArticleName").value = "";
     $("#inlineArticleCategory").value = "";
+    $("#inlineArticleUseDays").value = 0;
     renderRecipeEditor(getRecipeById(recipe.id));
   };
 
