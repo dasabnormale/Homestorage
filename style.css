@@ -208,8 +208,9 @@ input::placeholder, textarea::placeholder{color: rgba(168,179,207,.65)}
 .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
 .grid3{display:grid; grid-template-columns:1.5fr .7fr .9fr; gap:12px}
 .grid4{display:grid; grid-template-columns:1.4fr .7fr 1fr .8fr; gap:12px}
+.grid5{display:grid; grid-template-columns:1.6fr .7fr .9fr 1fr .8fr; gap:12px}
 @media (max-width: 980px){
-  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  .grid2,.grid3,.grid4,.grid5{grid-template-columns:1fr}
 }
 
 .inlineAdd{
@@ -268,7 +269,7 @@ input::placeholder, textarea::placeholder{color: rgba(168,179,207,.65)}
 }
 .thead,.trow{
   display:grid;
-  grid-template-columns: 1.2fr .6fr 1fr .8fr;
+  grid-template-columns: 1.4fr .7fr 1.2fr .9fr;
   gap:10px;
   align-items:center;
   padding:10px 12px;
@@ -283,6 +284,8 @@ input::placeholder, textarea::placeholder{color: rgba(168,179,207,.65)}
   background: rgba(255,255,255,.02);
 }
 .trow .tname{font-weight:800}
+.trow .tadd{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap}
+.trow .tadd input{flex:0 0 80px}
 .trow .tactions{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap}
 
 .shopping .srow{
@@ -346,7 +349,7 @@ input::placeholder, textarea::placeholder{color: rgba(168,179,207,.65)}
 
 .inventory .irow{
   display:grid;
-  grid-template-columns: 1fr 120px 170px 170px 160px;
+  grid-template-columns: 1fr 140px 160px;
   gap:10px;
   align-items:center;
   padding:10px;

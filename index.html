@@ -117,7 +117,7 @@
 
               <div class="inlineAdd">
                 <div class="inlineAddTitle">Artikel fehlt?</div>
-                <div class="grid4">
+                <div class="grid5">
                   <div class="field">
                     <label>Neuer Artikelname</label>
                     <input id="inlineArticleName" type="text" placeholder="z.B. Zwiebeln" />
@@ -125,6 +125,13 @@
                   <div class="field">
                     <label>Verbrauch (Tage)</label>
                     <input id="inlineArticleUseDays" type="number" min="0" step="1" value="0" />
+                  </div>
+                  <div class="field">
+                    <label>Verbrauch gilt</label>
+                    <select id="inlineArticleUseDaysScope">
+                      <option value="all" selected>Alle zusammen</option>
+                      <option value="per-item">Pro Stück</option>
+                    </select>
                   </div>
                   <div class="field">
                     <label>Kategorie (optional)</label>
@@ -170,26 +177,54 @@
           <button class="btn primary" id="btnNewArticle">+ Neuer Artikel</button>
         </div>
 
-        <div class="grid3">
-          <div class="field">
-            <label>Suche</label>
-            <input id="articleSearch" type="text" placeholder="z.B. Milch, Reis, ..." />
-          </div>
-          <div class="field">
-            <label>Sortierung</label>
-            <select id="articleSort">
-              <option value="name-asc">Name (A–Z)</option>
-              <option value="name-desc">Name (Z–A)</option>
-              <option value="newest">Neueste</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>&nbsp;</label>
-            <button class="btn" id="btnSeedDemo">Demo-Daten</button>
-          </div>
+        <div class="field">
+          <label>Suche</label>
+          <input id="articleSearch" type="text" placeholder="z.B. Milch, Reis, ..." />
         </div>
 
         <div id="articleTable" class="table"></div>
+
+        <div class="inlineAdd">
+          <div class="inlineAddTitle">Artikel fehlt?</div>
+          <div class="grid5">
+            <div class="field">
+              <label>Neuer Artikelname</label>
+              <input id="articleInlineName" type="text" placeholder="z.B. Hafermilch" />
+            </div>
+            <div class="field">
+              <label>Verbrauch (Tage)</label>
+              <input id="articleInlineUseDays" type="number" min="0" step="1" value="0" />
+            </div>
+            <div class="field">
+              <label>Verbrauch gilt</label>
+              <select id="articleInlineUseDaysScope">
+                <option value="all" selected>Alle zusammen</option>
+                <option value="per-item">Pro Stück</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Kategorie (optional)</label>
+              <select id="articleInlineCategory">
+                <option value="">Divers (keine Auswahl)</option>
+                <option value="Blumen / Pflanzen">Blumen / Pflanzen</option>
+                <option value="Früchte &amp; Gemüse">Früchte &amp; Gemüse</option>
+                <option value="Backwaren / Brot">Backwaren / Brot</option>
+                <option value="Frische Convenience">Frische Convenience</option>
+                <option value="Milchprodukte Joghurt Käse">Milchprodukte Joghurt Käse</option>
+                <option value="Fleisch/Fisch">Fleisch/Fisch</option>
+                <option value="Charcuterie / Aufschnitt / Feinkost">Charcuterie / Aufschnitt / Feinkost</option>
+                <option value="Grundnahrungsmittel">Grundnahrungsmittel</option>
+                <option value="Tiefkühl">Tiefkühl</option>
+                <option value="Non-Food">Non-Food</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="btn" id="btnArticleInlineAdd">Artikel hinzufügen</button>
+            </div>
+          </div>
+          <div class="hint">Der Artikel wird gespeichert und ist danach in der Liste verfügbar.</div>
+        </div>
       </div>
     </section>
 
@@ -199,15 +234,13 @@
           <div class="panelTitle">Einkaufsliste</div>
           <div class="panelActions">
             <button class="btn" id="btnSelectAllShopping">Alle auswählen</button>
-            <button class="btn" id="btnSelectNoneShopping">Auswahl aufheben</button>
             <button class="btn primary" id="btnConfirmPurchase">Einkauf bestätigen</button>
-            <button class="btn danger" id="btnClearShopping">Liste leeren</button>
             </div>
         </div>
 <div class="block">
   <div class="blockTitle">Artikel manuell hinzufügen</div>
 
-  <div class="grid3">
+  <div class="grid4">
     <div class="field">
       <label>Artikel</label>
       <select id="shopAddArticleSelect"></select>
@@ -217,6 +250,10 @@
       <input id="shopAddQty" type="number" min="1" step="1" value="1" />
     </div>
     <div class="field">
+      <label>Einheit</label>
+      <input id="shopAddUnit" type="text" value="Stk" />
+    </div>
+    <div class="field">
       <label>&nbsp;</label>
       <button class="btn" id="btnAddManualToShopping">Zur Einkaufsliste</button>
     </div>
@@ -224,14 +261,21 @@
 
   <div class="inlineAdd">
     <div class="inlineAddTitle">Artikel fehlt? Direkt erfassen</div>
-    <div class="grid4">
+    <div class="grid5">
       <div class="field">
         <label>Name</label>
         <input id="shopNewArticleName" type="text" placeholder="z.B. Zahnpasta" />
       </div>
       <div class="field">
-        <label>Einheit (für Rezepte & Einkaufsliste)</label>
-        <input id="shopNewArticleUnit" type="text" value="Stk" />
+        <label>Verbrauch (Tage)</label>
+        <input id="shopNewArticleUseDays" type="number" min="0" step="1" value="0" />
+      </div>
+      <div class="field">
+        <label>Verbrauch gilt</label>
+        <select id="shopNewArticleUseDaysScope">
+          <option value="all" selected>Alle zusammen</option>
+          <option value="per-item">Pro Stück</option>
+        </select>
       </div>
       <div class="field">
         <label>Kategorie (optional)</label>
@@ -254,11 +298,6 @@
         <button class="btn" id="btnShopCreateArticle">Artikel speichern</button>
       </div>
     </div>
-    <div class="field">
-      <label>Typische Verbrauchszeit (Tage)</label>
-      <input id="shopNewArticleUseDays" type="number" min="0" step="1" value="0" />
-    </div>
-    <div class="hint">Beispiel: Banane 7, Zahnpasta 180. 0 = egal/nicht berechnen.</div>
   </div>
 </div>
         <div id="shoppingList" class="shopping"></div>
@@ -269,10 +308,6 @@
   <div class="panel">
     <div class="panelHeader">
       <div class="panelTitle">Lager</div>
-      <div class="panelActions">
-        <button class="btn" id="btnToggleConsumed">Verbrauchte anzeigen</button>
-        <button class="btn danger" id="btnClearConsumed">Verbrauchte löschen</button>
-      </div>
     </div>
 
     <div id="inventoryList" class="inventory"></div>
@@ -297,9 +332,6 @@
     <section class="panel">
       <div class="panelHeader">
         <div class="panelTitle" id="historyDetailTitle">Historie</div>
-        <div class="panelActions">
-          <button class="btn danger" id="btnClearHistory">Historie löschen</button>
-        </div>
       </div>
 
       <div id="historyItems"></div>

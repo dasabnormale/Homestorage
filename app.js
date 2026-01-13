@@ -50,6 +50,13 @@ const CATEGORY_FALLBACK = "Divers";
 const CATEGORY_ORDER = [...ARTICLE_CATEGORIES, CATEGORY_FALLBACK];
 const DEFAULT_UNIT = "Stk";
 const UNIT_OPTIONS = ["Stk", "Zehe", "g", "ml", "Pack", "Dose", "Bund"];
+const USE_DAYS_SCOPE_ALL = "all";
+const USE_DAYS_SCOPE_PER_ITEM = "per-item";
+const USE_DAYS_SCOPE_OPTIONS = [
+  { value: USE_DAYS_SCOPE_ALL, label: "Alle zusammen" },
+  { value: USE_DAYS_SCOPE_PER_ITEM, label: "Pro Stück" }
+];
+const DEFAULT_USE_DAYS_SCOPE = USE_DAYS_SCOPE_ALL;
 let currentRoute = "recipes";
 let selectedRecipeId = null;
 let editingRecipeId = null;
@@ -106,6 +113,19 @@ function unitOptionsHtml(selected) {
   return opts.join("");
 }
 
+function normalizeUseDaysScope(scope) {
+  const clean = (scope || "").trim();
+  return USE_DAYS_SCOPE_OPTIONS.some(opt => opt.value === clean) ? clean : DEFAULT_USE_DAYS_SCOPE;
+}
+
+function useDaysScopeOptionsHtml(selected) {
+  const clean = normalizeUseDaysScope(selected);
+  return USE_DAYS_SCOPE_OPTIONS.map(opt => {
+    const sel = opt.value === clean ? " selected" : "";
+    return `<option value="${escapeHtml(opt.value)}"${sel}>${escapeHtml(opt.label)}</option>`;
+  }).join("");
+}
+
 function recipeItemUnit(item, article) {
   const unit = item?.unit || article?.unit || DEFAULT_UNIT;
   return normalizeUnit(unit);
@@ -141,6 +161,7 @@ function getRecipeById(id) {
 }
 
 function upsertArticle(article) {
+  if (article) article.useDaysScope = normalizeUseDaysScope(article.useDaysScope);
   const idx = state.articles.findIndex(a => a.id === article.id);
   if (idx >= 0) state.articles[idx] = article;
   else state.articles.unshift(article);
@@ -204,14 +225,25 @@ $("#modal")?.addEventListener("click", (e) => {
   if (e.target?.id === "modal") modalClose();
 });
 
-function ensureShoppingLine(articleId) {
+function ensureShoppingLine(articleId, unit) {
   let line = state.shopping.find(s => s.articleId === articleId) || null;
+  const incomingUnit = (unit || "").trim();
   if (!line) {
-    line = { id: Storage.nextId(state), articleId, qty: 0, sources: [], selected: false, createdAt: Date.now() };
+    line = {
+      id: Storage.nextId(state),
+      articleId,
+      qty: 0,
+      unit: normalizeUnit(incomingUnit || getArticleById(articleId)?.unit),
+      sources: [],
+      selected: false,
+      createdAt: Date.now()
+    };
     state.shopping.unshift(line);
   }
   if (!Array.isArray(line.sources)) line.sources = [];
   if (typeof line.selected !== "boolean") line.selected = false;
+  if (incomingUnit) line.unit = normalizeUnit(incomingUnit);
+  if (!line.unit) line.unit = normalizeUnit(getArticleById(articleId)?.unit);
   return line;
 }
 
@@ -220,9 +252,9 @@ function recomputeLineQty(line) {
   if (!line.qty) line.qty = 0;
 }
 
-function addShoppingFromRecipe(articleId, recipeId, qty) {
+function addShoppingFromRecipe(articleId, recipeId, qty, unit) {
   const q = Math.max(1, Number(qty || 1));
-  const line = ensureShoppingLine(articleId);
+  const line = ensureShoppingLine(articleId, unit);
   const idx = line.sources.findIndex(s => s.type === "recipe" && s.recipeId === recipeId);
   if (idx >= 0) line.sources[idx] = { type: "recipe", recipeId, qty: q };
   else line.sources.push({ type: "recipe", recipeId, qty: q });
@@ -230,9 +262,9 @@ function addShoppingFromRecipe(articleId, recipeId, qty) {
   Storage.save(state);
 }
 
-function addShoppingManual(articleId, qty) {
+function addShoppingManual(articleId, qty, unit) {
   const q = Math.max(1, Number(qty || 1));
-  const line = ensureShoppingLine(articleId);
+  const line = ensureShoppingLine(articleId, unit);
   const idx = line.sources.findIndex(s => s.type === "manual");
   if (idx >= 0) line.sources[idx].qty = Math.max(0, Number(line.sources[idx].qty || 0)) + q;
   else line.sources.push({ type: "manual", recipeId: null, qty: q });
@@ -535,7 +567,11 @@ function renderRecipeRightPane(alloc) {
       return;
     }
 
-    chosen.forEach(it => addShoppingFromRecipe(it.articleId, r.id, Number(it.qty || 1)));
+    chosen.forEach(it => {
+      const a = getArticleById(it.articleId);
+      const unit = recipeItemUnit(it, a);
+      addShoppingFromRecipe(it.articleId, r.id, Number(it.qty || 1), unit);
+    });
 
     modalOpen({
       title: "Auf Einkaufsliste",
@@ -568,6 +604,7 @@ function renderRecipeEditor(recipe) {
   $("#inlineArticleName").value = "";
   $("#inlineArticleCategory").value = "";
   $("#inlineArticleUseDays").value = 0;
+  $("#inlineArticleUseDaysScope").value = DEFAULT_USE_DAYS_SCOPE;
 
   const sel = $("#editItemArticleSelect");
   sel.innerHTML = "";
@@ -674,16 +711,18 @@ function renderRecipeEditor(recipe) {
     const name = ($("#inlineArticleName").value || "").trim();
     const category = normalizeCategory($("#inlineArticleCategory").value || "");
     const useDays = Math.max(0, Number($("#inlineArticleUseDays").value || 0));
+    const useDaysScope = normalizeUseDaysScope($("#inlineArticleUseDaysScope").value || DEFAULT_USE_DAYS_SCOPE);
     if (!name) return;
 
     const existing = state.articles.find(a => (a.name || "").trim().toLowerCase() === name.toLowerCase());
     if (existing) return;
 
-    const a = { id: Storage.nextId(state), name, category, useDays, createdAt: Date.now() };
+    const a = { id: Storage.nextId(state), name, category, useDays, useDaysScope, createdAt: Date.now() };
     upsertArticle(a);
     $("#inlineArticleName").value = "";
     $("#inlineArticleCategory").value = "";
     $("#inlineArticleUseDays").value = 0;
+    $("#inlineArticleUseDaysScope").value = DEFAULT_USE_DAYS_SCOPE;
     renderRecipeEditor(getRecipeById(recipe.id));
   };
 
@@ -717,7 +756,9 @@ $("#recipeSearch")?.addEventListener("input", renderRecipes);
 $("#historySearch")?.addEventListener("input", renderHistory);
 
 function openArticleEditor(articleId) {
-  const a = articleId ? getArticleById(articleId) : { id: null, name: "", category: "", useDays: 0 };
+  const a = articleId
+    ? getArticleById(articleId)
+    : { id: null, name: "", category: "", useDays: 0, useDaysScope: DEFAULT_USE_DAYS_SCOPE };
 
   modalOpen({
     title: articleId ? "Artikel bearbeiten" : "Neuer Artikel",
@@ -733,9 +774,15 @@ function openArticleEditor(articleId) {
         </select>
       </div>
       <div class="field">
-        <label>Typische Verbrauchszeit (Tage)</label>
+        <label>Verbrauch (Tage)</label>
         <input id="mArticleUseDays" type="number" min="0" step="1" value="${escapeHtml(String(Math.max(0, Number(a.useDays || 0))))}" />
         <div class="hint">0 = nicht berechnen.</div>
+      </div>
+      <div class="field">
+        <label>Verbrauch gilt</label>
+        <select id="mArticleUseDaysScope">
+          ${useDaysScopeOptionsHtml(a.useDaysScope)}
+        </select>
       </div>
     `,
     footerButtons: [
@@ -744,13 +791,14 @@ function openArticleEditor(articleId) {
         const name = ($("#mArticleName").value || "").trim();
         const category = normalizeCategory($("#mArticleCategory").value || "");
         const useDays = Math.max(0, Number($("#mArticleUseDays").value || 0));
+        const useDaysScope = normalizeUseDaysScope($("#mArticleUseDaysScope").value || DEFAULT_USE_DAYS_SCOPE);
         if (!name) return;
 
         const clash = state.articles.find(x => x.id !== a.id && (x.name||"").trim().toLowerCase() === name.toLowerCase());
         if (clash) return;
 
-        if (articleId) upsertArticle({ ...getArticleById(articleId), name, category, useDays });
-        else upsertArticle({ id: Storage.nextId(state), name, category, useDays, createdAt: Date.now() });
+        if (articleId) upsertArticle({ ...getArticleById(articleId), name, category, useDays, useDaysScope });
+        else upsertArticle({ id: Storage.nextId(state), name, category, useDays, useDaysScope, createdAt: Date.now() });
 
         modalClose();
         renderArticles();
@@ -787,16 +835,13 @@ function confirmDeleteArticle(articleId) {
 
 function renderArticles() {
   const q = ($("#articleSearch")?.value || "").trim().toLowerCase();
-  const sort = $("#articleSort")?.value || "name-asc";
 
   let items = [...state.articles].filter(a => {
     if (!q) return true;
     return `${a.name || ""} ${a.unit || ""}`.toLowerCase().includes(q);
   });
 
-  if (sort === "name-asc") items.sort((a,b) => (a.name||"").localeCompare(b.name||"", "de"));
-  if (sort === "name-desc") items.sort((a,b) => (b.name||"").localeCompare(a.name||"", "de"));
-  if (sort === "newest") items.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  items.sort((a,b) => (a.name||"").localeCompare(b.name||"", "de"));
 
   const table = $("#articleTable");
   if (!table) return;
@@ -805,12 +850,20 @@ function renderArticles() {
     <div class="thead">
       <div>Name</div>
       <div>Kategorie</div>
+      <div style="text-align:right">Einkaufsliste</div>
       <div style="text-align:right">Aktionen</div>
     </div>
   `;
 
   if (!items.length) {
-    table.innerHTML += `<div class="trow"><div class="tname">Keine Artikel</div><div></div><div class="tactions"></div></div>`;
+    table.innerHTML += `
+      <div class="trow">
+        <div class="tname">Keine Artikel</div>
+        <div></div>
+        <div></div>
+        <div class="tactions"></div>
+      </div>
+    `;
     return;
   }
 
@@ -823,6 +876,10 @@ function renderArticles() {
         <div class="muted">Verbrauchszeit: ${escapeHtml(String(Math.max(0, Number(a.useDays||0))))} Tage</div>
       </div>
       <div class="tcategory">${escapeHtml(displayCategory(a.category))}</div>
+      <div class="tadd">
+        <input type="number" min="1" step="1" value="1" />
+        <button class="btn" data-action="add-shopping" data-id="${a.id}">Zur Einkaufsliste</button>
+      </div>
       <div class="tactions">
         <button class="btn" data-action="edit" data-id="${a.id}">Bearbeiten</button>
         <button class="btn danger" data-action="delete" data-id="${a.id}">Löschen</button>
@@ -830,38 +887,41 @@ function renderArticles() {
     `;
     row.querySelector('[data-action="edit"]')?.addEventListener("click", () => openArticleEditor(a.id));
     row.querySelector('[data-action="delete"]')?.addEventListener("click", () => confirmDeleteArticle(a.id));
+    row.querySelector('[data-action="add-shopping"]')?.addEventListener("click", (e) => {
+      const qtyInput = row.querySelector('input[type="number"]');
+      const qty = Math.max(1, Number(qtyInput?.value || 1));
+      addShoppingManual(a.id, qty, normalizeUnit(a.unit || DEFAULT_UNIT));
+      renderShopping();
+      renderRecipes();
+    });
     table.appendChild(row);
   });
+
+  $("#btnArticleInlineAdd").onclick = () => {
+    const name = ($("#articleInlineName").value || "").trim();
+    const category = normalizeCategory($("#articleInlineCategory").value || "");
+    const useDays = Math.max(0, Number($("#articleInlineUseDays").value || 0));
+    const useDaysScope = normalizeUseDaysScope($("#articleInlineUseDaysScope").value || DEFAULT_USE_DAYS_SCOPE);
+    if (!name) return;
+
+    const existing = state.articles.find(a => (a.name || "").trim().toLowerCase() === name.toLowerCase());
+    if (existing) return;
+
+    upsertArticle({ id: Storage.nextId(state), name, category, useDays, useDaysScope, createdAt: Date.now() });
+    $("#articleInlineName").value = "";
+    $("#articleInlineCategory").value = "";
+    $("#articleInlineUseDays").value = 0;
+    $("#articleInlineUseDaysScope").value = DEFAULT_USE_DAYS_SCOPE;
+    renderArticles();
+  };
 }
 
 $("#btnNewArticle")?.addEventListener("click", () => openArticleEditor(null));
 $("#articleSearch")?.addEventListener("input", renderArticles);
-$("#articleSort")?.addEventListener("change", renderArticles);
-
-$("#btnSeedDemo")?.addEventListener("click", () => {
-  if (state.articles.length || state.recipes.length || state.shopping.length || state.inventory.length || state.history.length) return;
-
-  const garlic = { id: Storage.nextId(state), name: "Knoblauch", unit: "Zehe", useDays: 14, createdAt: Date.now() };
-  const tomato = { id: Storage.nextId(state), name: "Tomaten (Dose)", unit: "Dose", useDays: 365, createdAt: Date.now() };
-  upsertArticle(garlic);
-  upsertArticle(tomato);
-
-  const r1 = {
-    id: Storage.nextId(state),
-    name: "Tomatensauce",
-    tags: "",
-    description: "1) Knoblauch\n2) Tomaten\n3) Köcheln",
-    items: [{ articleId: garlic.id, qty: 1, checked: true }, { articleId: tomato.id, qty: 1, checked: true }],
-    createdAt: Date.now()
-  };
-  upsertRecipe(r1);
-
-  selectedRecipeId = r1.id;
-  renderRecipes();
-});
 
 function renderShoppingAddForm() {
   const sel = $("#shopAddArticleSelect");
+  const unitInput = $("#shopAddUnit");
   if (!sel) return;
   sel.innerHTML = "";
 
@@ -872,6 +932,10 @@ function renderShoppingAddForm() {
     opt.textContent = "Keine Artikel – unten erstellen";
     sel.appendChild(opt);
     sel.disabled = true;
+    if (unitInput) {
+      unitInput.value = DEFAULT_UNIT;
+      unitInput.disabled = true;
+    }
     return;
   }
 
@@ -879,9 +943,21 @@ function renderShoppingAddForm() {
   sorted.forEach(a => {
     const opt = document.createElement("option");
     opt.value = String(a.id);
-    opt.textContent = `${a.name} (${a.unit || "Stk"})`;
+    opt.textContent = `${a.name}`;
     sel.appendChild(opt);
   });
+
+  if (unitInput) {
+    const current = getArticleById(Number(sel.value));
+    unitInput.value = current?.unit || DEFAULT_UNIT;
+    unitInput.disabled = false;
+  }
+
+  sel.onchange = () => {
+    if (!unitInput) return;
+    const current = getArticleById(Number(sel.value));
+    unitInput.value = current?.unit || DEFAULT_UNIT;
+  };
 }
 
 function renderShopping() {
@@ -890,25 +966,28 @@ function renderShopping() {
   $("#btnAddManualToShopping").onclick = () => {
     const articleId = Number($("#shopAddArticleSelect")?.value || 0);
     const qty = Math.max(1, Number($("#shopAddQty")?.value || 1));
+    const unit = ($("#shopAddUnit")?.value || DEFAULT_UNIT).trim() || DEFAULT_UNIT;
     if (!articleId) return;
-    addShoppingManual(articleId, qty);
+    addShoppingManual(articleId, qty, unit);
     renderShopping();
     renderRecipes();
   };
 
   $("#btnShopCreateArticle").onclick = () => {
     const name = ($("#shopNewArticleName")?.value || "").trim();
-    const unit = ($("#shopNewArticleUnit")?.value || "Stk").trim() || "Stk";
     const category = normalizeCategory($("#shopNewArticleCategory")?.value || "");
     const useDays = Math.max(0, Number($("#shopNewArticleUseDays")?.value || 0));
+    const useDaysScope = normalizeUseDaysScope($("#shopNewArticleUseDaysScope")?.value || DEFAULT_USE_DAYS_SCOPE);
     if (!name) return;
 
     const existing = state.articles.find(a => (a.name||"").trim().toLowerCase() === name.toLowerCase());
     if (existing) return;
 
-    upsertArticle({ id: Storage.nextId(state), name, unit, category, useDays, createdAt: Date.now() });
+    upsertArticle({ id: Storage.nextId(state), name, category, useDays, useDaysScope, createdAt: Date.now() });
     $("#shopNewArticleName").value = "";
     $("#shopNewArticleCategory").value = "";
+    $("#shopNewArticleUseDays").value = 0;
+    $("#shopNewArticleUseDaysScope").value = DEFAULT_USE_DAYS_SCOPE;
     renderShopping();
   };
 
@@ -939,7 +1018,7 @@ function renderShopping() {
 
   lines.forEach(line => {
     const a = getArticleById(line.articleId);
-    const unit = a?.unit || "Stk";
+    const unit = normalizeUnit(line.unit || a?.unit || DEFAULT_UNIT);
 
     const sourceTxt = (() => {
       const src = line.sources || [];
@@ -998,29 +1077,6 @@ function renderShopping() {
     renderShopping();
   };
 
-  $("#btnSelectNoneShopping").onclick = () => {
-    state.shopping.forEach(l => l.selected = false);
-    Storage.save(state);
-    renderShopping();
-  };
-
-  $("#btnClearShopping").onclick = () => {
-    modalOpen({
-      title: "Einkaufsliste leeren",
-      bodyHtml: `<div class="empty">Willst du wirklich die komplette Einkaufsliste leeren?</div>`,
-      footerButtons: [
-        { label: "Abbrechen", className: "btn", onClick: modalClose },
-        { label: "Leeren", className: "btn danger", onClick: () => {
-          modalClose();
-          state.shopping = [];
-          Storage.save(state);
-          renderShopping();
-          renderRecipes();
-        }}
-      ]
-    });
-  };
-
   $("#btnConfirmPurchase").onclick = () => {
     const selected = state.shopping.filter(l => l.selected && Math.max(0, Number(l.qty||0)) > 0);
     if (!selected.length) {
@@ -1042,7 +1098,7 @@ function renderShopping() {
         <div class="blockTitle">Gekauft (ins Lager)</div>
         ${selected.map(l => {
           const a = getArticleById(l.articleId);
-          const unit = a?.unit || "Stk";
+          const unit = normalizeUnit(l.unit || a?.unit || DEFAULT_UNIT);
           return `
             <div class="row">
               <div></div>
@@ -1073,16 +1129,19 @@ function renderShopping() {
             const input = document.querySelector(`input[data-buy="${line.id}"]`);
             const bought = Math.max(0, Number(input?.value || 0));
             const a = getArticleById(line.articleId);
-            const unit = a?.unit || "Stk";
+            const unit = normalizeUnit(line.unit || a?.unit || DEFAULT_UNIT);
 
             if (bought > 0) {
               const useDays = Math.max(0, Number(a?.useDays || 0));
-              const useByAt = useDays ? (purchasedAt + msDay(useDays)) : null;
+              const useDaysScope = normalizeUseDaysScope(a?.useDaysScope || DEFAULT_USE_DAYS_SCOPE);
+              const totalUseDays = useDaysScope === USE_DAYS_SCOPE_PER_ITEM ? (useDays * bought) : useDays;
+              const useByAt = useDays ? (purchasedAt + msDay(totalUseDays)) : null;
 
               state.inventory.unshift({
                 id: Storage.nextId(state),
                 articleId: line.articleId,
                 qty: bought,
+                unit,
                 purchasedAt,
                 useByAt,
                 consumed: false,
@@ -1125,6 +1184,13 @@ function renderInventory() {
   if (!list || !empty) return;
   list.innerHTML = "";
 
+  const before = state.inventory.length;
+  state.inventory = state.inventory.filter(inv => {
+    const qty = Math.max(0, Number(inv.qty || 0));
+    return qty > 0 && !inv.consumed;
+  });
+  if (state.inventory.length !== before) Storage.save(state);
+
   const items = [...state.inventory];
   if (!items.length) empty.classList.remove("hidden");
   else empty.classList.add("hidden");
@@ -1132,9 +1198,6 @@ function renderInventory() {
   const now = Date.now();
 
   items.sort((a,b) => {
-    const ad = a.consumed ? 1 : 0;
-    const bd = b.consumed ? 1 : 0;
-    if (ad !== bd) return ad - bd;
     const aBy = a.useByAt || Number.MAX_SAFE_INTEGER;
     const bBy = b.useByAt || Number.MAX_SAFE_INTEGER;
     if (aBy !== bBy) return aBy - bBy;
@@ -1143,43 +1206,35 @@ function renderInventory() {
 
   items.forEach(inv => {
     const a = getArticleById(inv.articleId);
-    const unit = a?.unit || "Stk";
+    const unit = normalizeUnit(inv.unit || a?.unit || DEFAULT_UNIT);
     const expired = inv.useByAt && inv.useByAt < now;
 
     const row = document.createElement("div");
     row.className = "irow";
     row.innerHTML = `
       <div>
-        <div class="iname ${inv.consumed ? "strike" : ""}">${escapeHtml(a ? a.name : "Unbekannter Artikel")}</div>
+        <div class="iname">${escapeHtml(a ? a.name : "Unbekannter Artikel")}</div>
         <div class="imeta">
           Bestand: ${escapeHtml(String(Math.max(0, Number(inv.qty||0))))} ${escapeHtml(unit)}
           · Kauf: ${escapeHtml(fmtDate(inv.purchasedAt))}
           · Brauchen bis: <span class="${expired ? "expired" : ""}">${escapeHtml(inv.useByAt ? fmtDate(inv.useByAt) : "—")}</span>
         </div>
       </div>
-      <div class="istatus ${expired ? "expired" : ""}">
-        ${inv.consumed ? "Verbraucht" : (expired ? "Abgelaufen" : "Aktiv")}
-      </div>
       <div class="iqty">
         <input type="number" min="0" step="1" value="${escapeHtml(String(Math.max(0, Number(inv.qty || 0))))}" />
       </div>
       <div class="iactions">
-        <button class="btn" data-action="consume">${inv.consumed ? "Reaktivieren" : "Verbraucht"}</button>
         <button class="btn danger" data-action="delete">Löschen</button>
       </div>
-      <div class="hidden"></div>
     `;
 
     row.querySelector('input[type="number"]')?.addEventListener("change", (e) => {
-      inv.qty = Math.max(0, Number(e.target.value || 0));
-      Storage.save(state);
-      renderInventory();
-      renderRecipes();
-    });
-
-    row.querySelector('[data-action="consume"]')?.addEventListener("click", () => {
-      inv.consumed = !inv.consumed;
-      inv.consumedAt = inv.consumed ? Date.now() : null;
+      const nextQty = Math.max(0, Number(e.target.value || 0));
+      if (!nextQty) {
+        state.inventory = state.inventory.filter(x => x.id !== inv.id);
+      } else {
+        inv.qty = nextQty;
+      }
       Storage.save(state);
       renderInventory();
       renderRecipes();
@@ -1223,7 +1278,7 @@ function renderHistory() {
 
     (h.items || []).forEach(it => {
       const a = getArticleById(it.articleId);
-      const unit = it.unit || a?.unit || "Stk";
+      const unit = normalizeUnit(it.unit || a?.unit || DEFAULT_UNIT);
       const name = a ? a.name : "Unbekannter Artikel";
 
       const sourceParts = [];
@@ -1359,21 +1414,6 @@ function renderHistory() {
     renderHistory();
   };
 
-  $("#btnClearHistory").onclick = () => {
-    modalOpen({
-      title: "Historie löschen",
-      bodyHtml: `<div class="empty">Willst du wirklich die komplette Historie löschen?</div>`,
-      footerButtons: [
-        { label: "Abbrechen", className: "btn", onClick: modalClose },
-        { label: "Löschen", className: "btn danger", onClick: () => {
-          modalClose();
-          state.history = [];
-          Storage.save(state);
-          renderHistory();
-        }}
-      ]
-    });
-  };
 }
 
 function init() {
@@ -1381,7 +1421,14 @@ function init() {
   routeTo(startRoute);
 
   if (!state.articles.length) {
-    upsertArticle({ id: Storage.nextId(state), name: "Knoblauch", unit: "Zehe", useDays: 14, createdAt: Date.now() });
+    upsertArticle({
+      id: Storage.nextId(state),
+      name: "Knoblauch",
+      unit: "Zehe",
+      useDays: 14,
+      useDaysScope: DEFAULT_USE_DAYS_SCOPE,
+      createdAt: Date.now()
+    });
   }
 
   $("#btnNewArticle")?.addEventListener("click", () => openArticleEditor(null));
