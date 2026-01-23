@@ -48,3 +48,23 @@ git
 ## Development
 VS Code with Live Server and Codex Extension
 
+## Backend Setup
+- Install dependencies: `npm install`
+- Create `.env` with your database connection and optional settings
+- Run the migration: `npm run migrate`
+- Start the server: `npm run dev`
+- Open `http://localhost:3000`
+
+Example `.env`:
+```
+DATABASE_URL=postgresql://homestorage:change_me_long_password@192.168.0.33:5432/homestorage
+PORT=3000
+```
+
+Optional environment variables:
+- `CORS_ORIGIN` to enable CORS for a specific origin
+- `REQUEST_LOG=true` for HTTP request logs
+
+Notes:
+- Static files are served from `public/`
+- The frontend persists its data via `/api/state`

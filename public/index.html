@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Foodwaste – Prototyp</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">FW</div>
+      <div class="brandText">
+        <div class="brandTitle">Foodwaste</div>
+        <div class="brandSub">Rezepte · Artikel · Einkaufsliste</div>
+      </div>
+    </div>
+
+<nav class="nav">
+  <a class="navLink" href="#recipes" data-route="recipes">Rezepte</a>
+  <a class="navLink" href="#articles" data-route="articles">Artikel</a>
+  <a class="navLink" href="#shopping" data-route="shopping">Einkaufsliste</a>
+  <a class="navLink" href="#inventory" data-route="inventory">Lager</a>
+  <a class="navLink" href="#history" data-route="history">Historie</a>
+</nav>
+  </header>
+
+  <main class="container">
+    <section id="view-recipes" class="view">
+      <div class="split">
+        <aside class="panel">
+          <div class="panelHeader">
+            <div class="panelTitle">Rezepte</div>
+            <button class="btn primary" id="btnNewRecipe">+ Neues Rezept</button>
+          </div>
+          <div class="field">
+            <label>Suche</label>
+            <input id="recipeSearch" type="text" placeholder="z.B. Pasta, Curry, ..." />
+          </div>
+          <div class="list" id="recipeList"></div>
+        </aside>
+
+        <section class="panel">
+          <div class="panelHeader">
+            <div class="panelTitle" id="recipeDetailTitle">Rezept</div>
+            <div class="panelActions" id="recipeDetailActions"></div>
+          </div>
+
+          <div id="recipeDetailEmpty" class="empty">
+            Wähle links ein Rezept aus oder erstelle ein neues.
+          </div>
+
+          <div id="recipeDetail" class="recipeDetail hidden">
+            <div class="metaRow">
+              <div class="badge" id="recipeItemCount"></div>
+            </div>
+
+            <div class="block">
+              <div class="blockTitle">Beschreibung / Steps</div>
+              <div class="prose" id="recipeDescription"></div>
+            </div>
+
+            <div class="block">
+              <div class="blockTitle">Artikel im Rezept</div>
+              <div id="recipeItems"></div>
+              <div class="toolbar">
+                <button class="btn primary" id="btnAddToShopping">Auf Einkaufsliste</button>
+                <button class="btn" id="btnConsumeFromRecipe">Verbrauchen</button>
+                <button class="btn" id="btnResetChecks">Alle anhaken</button>
+              </div>
+              <div class="hint">
+                Checkbox: Artikel wird auf die Einkaufsliste übernommen (abgehakt = wird übernommen).
+              </div>
+            </div>
+          </div>
+
+          <div id="recipeEditor" class="hidden">
+            <div class="grid2">
+              <div class="field">
+                <label>Name</label>
+                <input id="editRecipeName" type="text" placeholder="z.B. Spaghetti Carbonara" />
+              </div>
+              <div class="field">
+                <label>Optional: Tags</label>
+                <input id="editRecipeTags" type="text" placeholder="z.B. pasta, schnell, vegetarisch" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Beschreibung / Steps</label>
+              <textarea id="editRecipeDescription" rows="7" placeholder="Schritte, Tipps, Link, ..."></textarea>
+            </div>
+
+            <div class="block">
+              <div class="blockTitle">Artikel hinzufügen</div>
+
+              <div class="grid4">
+                <div class="field">
+                  <label>Artikel wählen</label>
+                  <select id="editItemArticleSelect"></select>
+                </div>
+
+                <div class="field">
+                  <label>Menge</label>
+                  <input id="editItemQty" type="number" min="1" step="1" value="1" />
+                </div>
+
+                <div class="field">
+                  <label>Einheit</label>
+                  <select id="editItemUnit"></select>
+                </div>
+
+                <div class="field">
+                  <label>&nbsp;</label>
+                  <button class="btn" id="btnAddItemToRecipe">Hinzufügen</button>
+                </div>
+              </div>
+
+              <div class="inlineAdd">
+                <div class="inlineAddTitle">Artikel fehlt?</div>
+                <div class="grid5">
+                  <div class="field">
+                    <label>Neuer Artikelname</label>
+                    <input id="inlineArticleName" type="text" placeholder="z.B. Zwiebeln" />
+                  </div>
+                  <div class="field">
+                    <label>Verbrauch (Tage)</label>
+                    <input id="inlineArticleUseDays" type="number" min="0" step="1" value="0" />
+                  </div>
+                  <div class="field">
+                    <label>Verbrauch gilt</label>
+                    <select id="inlineArticleUseDaysScope">
+                      <option value="all" selected>Alle zusammen</option>
+                      <option value="per-item">Pro Stück</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Kategorie (optional)</label>
+                    <select id="inlineArticleCategory">
+                      <option value="">Divers (keine Auswahl)</option>
+                      <option value="Blumen / Pflanzen">Blumen / Pflanzen</option>
+                      <option value="Früchte &amp; Gemüse">Früchte &amp; Gemüse</option>
+                      <option value="Backwaren / Brot">Backwaren / Brot</option>
+                      <option value="Frische Convenience">Frische Convenience</option>
+                      <option value="Milchprodukte Joghurt Käse">Milchprodukte Joghurt Käse</option>
+                      <option value="Fleisch/Fisch">Fleisch/Fisch</option>
+                      <option value="Charcuterie / Aufschnitt / Feinkost">Charcuterie / Aufschnitt / Feinkost</option>
+                      <option value="Grundnahrungsmittel">Grundnahrungsmittel</option>
+                      <option value="Tiefkühl">Tiefkühl</option>
+                      <option value="Non-Food">Non-Food</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="btn" id="btnInlineAddArticle">Artikel hinzufügen</button>
+                  </div>
+                </div>
+                <div class="hint">Der Artikel wird gespeichert und ist danach im Dropdown auswählbar.</div>
+              </div>
+
+              <div class="blockTitle mt16">Aktuelle Rezept-Artikel</div>
+              <div id="editRecipeItems"></div>
+            </div>
+
+            <div class="toolbar">
+              <button class="btn primary" id="btnSaveRecipe">Speichern</button>
+              <button class="btn" id="btnCancelRecipeEdit">Abbrechen</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="view-articles" class="view hidden">
+      <div class="panel">
+        <div class="panelHeader">
+          <div class="panelTitle">Artikel</div>
+          <button class="btn primary" id="btnNewArticle">+ Neuer Artikel</button>
+        </div>
+
+        <div class="field">
+          <label>Suche</label>
+          <input id="articleSearch" type="text" placeholder="z.B. Milch, Reis, ..." />
+        </div>
+
+        <div id="articleTable" class="table"></div>
+
+        <div class="inlineAdd">
+          <div class="inlineAddTitle">Artikel fehlt?</div>
+          <div class="grid5">
+            <div class="field">
+              <label>Neuer Artikelname</label>
+              <input id="articleInlineName" type="text" placeholder="z.B. Hafermilch" />
+            </div>
+            <div class="field">
+              <label>Verbrauch (Tage)</label>
+              <input id="articleInlineUseDays" type="number" min="0" step="1" value="0" />
+            </div>
+            <div class="field">
+              <label>Verbrauch gilt</label>
+              <select id="articleInlineUseDaysScope">
+                <option value="all" selected>Alle zusammen</option>
+                <option value="per-item">Pro Stück</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Kategorie (optional)</label>
+              <select id="articleInlineCategory">
+                <option value="">Divers (keine Auswahl)</option>
+                <option value="Blumen / Pflanzen">Blumen / Pflanzen</option>
+                <option value="Früchte &amp; Gemüse">Früchte &amp; Gemüse</option>
+                <option value="Backwaren / Brot">Backwaren / Brot</option>
+                <option value="Frische Convenience">Frische Convenience</option>
+                <option value="Milchprodukte Joghurt Käse">Milchprodukte Joghurt Käse</option>
+                <option value="Fleisch/Fisch">Fleisch/Fisch</option>
+                <option value="Charcuterie / Aufschnitt / Feinkost">Charcuterie / Aufschnitt / Feinkost</option>
+                <option value="Grundnahrungsmittel">Grundnahrungsmittel</option>
+                <option value="Tiefkühl">Tiefkühl</option>
+                <option value="Non-Food">Non-Food</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="btn" id="btnArticleInlineAdd">Artikel hinzufügen</button>
+            </div>
+          </div>
+          <div class="hint">Der Artikel wird gespeichert und ist danach in der Liste verfügbar.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-shopping" class="view hidden">
+      <div class="panel">
+        <div class="panelHeader">
+          <div class="panelTitle">Einkaufsliste</div>
+          <div class="panelActions">
+            <button class="btn" id="btnSelectAllShopping">Alle auswählen</button>
+            <button class="btn primary" id="btnConfirmPurchase">Einkauf bestätigen</button>
+            </div>
+        </div>
+<div class="block">
+  <div class="blockTitle">Artikel manuell hinzufügen</div>
+
+  <div class="grid4">
+    <div class="field">
+      <label>Artikel</label>
+      <select id="shopAddArticleSelect"></select>
+    </div>
+    <div class="field">
+      <label>Menge</label>
+      <input id="shopAddQty" type="number" min="1" step="1" value="1" />
+    </div>
+    <div class="field">
+      <label>Einheit</label>
+      <input id="shopAddUnit" type="text" value="Stk" />
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" id="btnAddManualToShopping">Zur Einkaufsliste</button>
+    </div>
+  </div>
+
+  <div class="inlineAdd">
+    <div class="inlineAddTitle">Artikel fehlt? Direkt erfassen</div>
+    <div class="grid5">
+      <div class="field">
+        <label>Name</label>
+        <input id="shopNewArticleName" type="text" placeholder="z.B. Zahnpasta" />
+      </div>
+      <div class="field">
+        <label>Verbrauch (Tage)</label>
+        <input id="shopNewArticleUseDays" type="number" min="0" step="1" value="0" />
+      </div>
+      <div class="field">
+        <label>Verbrauch gilt</label>
+        <select id="shopNewArticleUseDaysScope">
+          <option value="all" selected>Alle zusammen</option>
+          <option value="per-item">Pro Stück</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Kategorie (optional)</label>
+        <select id="shopNewArticleCategory">
+          <option value="">Divers (keine Auswahl)</option>
+          <option value="Blumen / Pflanzen">Blumen / Pflanzen</option>
+          <option value="Früchte &amp; Gemüse">Früchte &amp; Gemüse</option>
+          <option value="Backwaren / Brot">Backwaren / Brot</option>
+          <option value="Frische Convenience">Frische Convenience</option>
+          <option value="Milchprodukte Joghurt Käse">Milchprodukte Joghurt Käse</option>
+          <option value="Fleisch/Fisch">Fleisch/Fisch</option>
+          <option value="Charcuterie / Aufschnitt / Feinkost">Charcuterie / Aufschnitt / Feinkost</option>
+          <option value="Grundnahrungsmittel">Grundnahrungsmittel</option>
+          <option value="Tiefkühl">Tiefkühl</option>
+          <option value="Non-Food">Non-Food</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="btn" id="btnShopCreateArticle">Artikel speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+        <div id="shoppingList" class="shopping"></div>
+        <div id="shoppingEmpty" class="empty hidden">Einkaufsliste ist leer.</div>
+      </div>
+    </section>
+    <section id="view-inventory" class="view hidden">
+  <div class="panel">
+    <div class="panelHeader">
+      <div class="panelTitle">Lager</div>
+    </div>
+
+    <div id="inventoryList" class="inventory"></div>
+    <div id="inventoryEmpty" class="empty hidden">Lager ist leer.</div>
+  </div>
+</section>
+<section id="view-history" class="view hidden">
+  <div class="split">
+    <aside class="panel">
+      <div class="panelHeader">
+        <div class="panelTitle">Historie</div>
+        <button class="btn" id="btnHistoryShowAll">Alle anzeigen</button>
+      </div>
+      <div class="field">
+        <label>Suche</label>
+        <input id="historySearch" type="text" placeholder="z.B. Zwiebeln, Milch, ..." />
+      </div>
+      <div class="list" id="historyDateList"></div>
+      <div id="historyDateEmpty" class="empty hidden">Keine passenden Daten.</div>
+    </aside>
+
+    <section class="panel">
+      <div class="panelHeader">
+        <div class="panelTitle" id="historyDetailTitle">Historie</div>
+      </div>
+
+      <div id="historyItems"></div>
+      <div id="historyItemsEmpty" class="empty hidden">Keine Einkäufe in der Historie.</div>
+    </section>
+  </div>
+</section>
+
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modalCard">
+      <div class="modalHeader">
+        <div class="modalTitle" id="modalTitle">Titel</div>
+        <button class="iconBtn" id="modalClose" aria-label="Schliessen">×</button>
+      </div>
+      <div class="modalBody" id="modalBody"></div>
+      <div class="modalFooter" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
